@@ -56,6 +56,52 @@ const Register = asyncHandler(async (req, res) => {
   });
 });
 
+const Login = asyncHandler(async (req, res) => {
+  //Fetch the user credentials from the request body
+  const { email, password } = req.body;
+
+  //Check if the emai or password are null
+  if (!email && !password) {
+    res.status(403);
+    throw new Error("Please provide all the required fields");
+  }
+
+  //Validate the email
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    res.status(403);
+    throw new Error("Invalid email address");
+  }
+
+  //Fetch the user from the database with the provided email
+  const user = await Prisma.user.findUnique({
+    where: {
+      email,
+    },
+  });
+
+  //Check if the use does not exist in the database
+  if (!user) {
+    res.status(401);
+    throw new Error("User not found");
+  }
+
+  //Check if the provided password and one with the fetched user matches
+  const passwordMatches = await bcrypt.compare(password, user.password);
+
+  //If they don't match throw an error
+  if (!passwordMatches) {
+    res.status(401);
+    throw new Error("Invalid Credentials");
+  }
+  //if the password matches and the user exists already return success message with the user
+  res.status(200).json({
+    message: "User Logged in successfully",
+    user,
+  });
+});
+
 module.exports = {
   Register,
+  Login,
 };
